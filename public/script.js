@@ -68,9 +68,8 @@ document.addEventListener('DOMContentLoaded', function() {
  * Mostra apenas a seção de contato inicialmente
  */
 function initializeProgressiveFlow() {
-    // Esconde todas as seções exceto a primeira (contato)
+    // Esconde todas as seções exceto contato e CEP (ambas visíveis desde o início)
     const sections = [
-        'sectionCep',
         'shippingOptions',
         'sectionPersonalData',
         'sectionAddressInfo',
@@ -86,6 +85,12 @@ function initializeProgressiveFlow() {
             section.classList.remove('show');
         }
     });
+
+    // Garante que a seção de CEP esteja visível
+    const sectionCep = document.getElementById('sectionCep');
+    if (sectionCep) {
+        sectionCep.classList.remove('hidden');
+    }
 
     // Foca no campo de email
     setTimeout(() => {
@@ -207,7 +212,7 @@ function setupEventListeners() {
 
 /**
  * Manipula o blur do campo de email
- * Revela a próxima seção se o email for válido
+ * Apenas valida o email (CEP já está visível desde o início)
  */
 function handleEmailBlur() {
     const emailField = document.getElementById('email');
@@ -215,31 +220,27 @@ function handleEmailBlur() {
     
     if (isValid && !flowState.emailValid) {
         flowState.emailValid = true;
-        revealSection('sectionCep');
-        
-        // Foca no campo de CEP após um pequeno delay
-        setTimeout(() => {
-            const zipCodeField = document.getElementById('zipCode');
-            if (zipCodeField) {
-                zipCodeField.focus();
-            }
-        }, 400);
+        // CEP já está visível, não precisa revelar
     }
 }
 
 /**
  * Revela uma seção com animação suave
+ * @param {string} sectionId - ID da seção a ser revelada
+ * @param {boolean} enableScroll - Se true, faz scroll para a seção (padrão: false)
  */
-function revealSection(sectionId) {
+function revealSection(sectionId, enableScroll = false) {
     const section = document.getElementById(sectionId);
     if (section) {
         section.classList.remove('hidden');
         section.classList.add('show');
         
-        // Scroll suave para a seção
-        setTimeout(() => {
-            section.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        // Scroll suave para a seção (apenas se habilitado)
+        if (enableScroll) {
+            setTimeout(() => {
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
     }
 }
 
@@ -373,19 +374,12 @@ function selectShipping() {
     flowState.shippingSelected = true;
     updateShippingCost();
     
-    // Revela seções de dados pessoais e endereço
+    // Revela seções de dados pessoais, endereço e CPF (sem scroll)
     if (!document.getElementById('sectionPersonalData').classList.contains('show')) {
-        revealSection('sectionPersonalData');
-        revealSection('sectionAddressInfo');
-        revealSection('sectionAddressComplement');
-        
-        // Foca no primeiro campo de dados pessoais
-        setTimeout(() => {
-            const firstNameField = document.getElementById('firstName');
-            if (firstNameField) {
-                firstNameField.focus();
-            }
-        }, 400);
+        revealSection('sectionPersonalData', false);
+        revealSection('sectionAddressInfo', false);
+        revealSection('sectionAddressComplement', false);
+        revealSection('sectionCpf', false); // CPF já disponível junto com endereço
     }
 }
 
@@ -419,18 +413,7 @@ function checkAddressCompletion() {
     
     if (isValid && !flowState.addressComplementValid) {
         flowState.addressComplementValid = true;
-        
-        // Revela seção de CPF
-        if (!document.getElementById('sectionCpf').classList.contains('show')) {
-            revealSection('sectionCpf');
-            
-            setTimeout(() => {
-                const cpfField = document.getElementById('cpf');
-                if (cpfField) {
-                    cpfField.focus();
-                }
-            }, 400);
-        }
+        // CPF já está visível junto com o endereço, não precisa revelar
     }
     
     checkFormCompletion();
@@ -1342,3 +1325,42 @@ function toggleOrderSummary() {
         document.querySelector('.summary-toggle-text').textContent = 'Exibir resumo do pedido';
     }
 }
+
+/**
+ * Controla a visibilidade do botão Continuar fictício
+ * O botão fictício é escondido quando o botão real de pagamento aparece
+ */
+function updateContinueButtonVisibility() {
+    const sectionButton = document.getElementById('sectionButton');
+    const sectionContinueButton = document.getElementById('sectionContinueButton');
+    
+    if (sectionButton && sectionContinueButton) {
+        // Se o botão real está visível (não tem classe hidden), esconde o fictício
+        if (!sectionButton.classList.contains('hidden')) {
+            sectionContinueButton.style.display = 'none';
+        } else {
+            sectionContinueButton.style.display = 'flex';
+        }
+    }
+}
+
+// Observa mudanças na classe do sectionButton para atualizar o botão fictício
+document.addEventListener('DOMContentLoaded', function() {
+    const sectionButton = document.getElementById('sectionButton');
+    
+    if (sectionButton) {
+        // Cria um MutationObserver para observar mudanças de classe
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    updateContinueButtonVisibility();
+                }
+            });
+        });
+        
+        observer.observe(sectionButton, { attributes: true });
+    }
+    
+    // Atualiza a visibilidade inicial
+    updateContinueButtonVisibility();
+});
