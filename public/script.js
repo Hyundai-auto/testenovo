@@ -1,5 +1,5 @@
 /**
- * Checkout Progressivo - Script Principal
+ * Checkout Progressivo - Script Principal (CORRIGIDO)
  * Fluxo UX otimizado com revelação progressiva de campos
  */
 
@@ -140,8 +140,15 @@ function updateOrderTotals() {
 
 function setupEventListeners() {
     // Form submissions
-    document.getElementById('deliveryForm').addEventListener('submit', handleDeliverySubmit);
-    document.getElementById('paymentForm').addEventListener('submit', handlePaymentSubmit);
+    const deliveryForm = document.getElementById('deliveryForm');
+    if (deliveryForm) {
+        deliveryForm.addEventListener('submit', handleDeliverySubmit);
+    }
+    
+    const paymentForm = document.getElementById('paymentForm');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', handlePaymentSubmit);
+    }
 
     // Shipping options
     document.querySelectorAll('.shipping-option').forEach(option => {
@@ -150,7 +157,10 @@ function setupEventListeners() {
 
     // Payment methods
     document.querySelectorAll('.payment-method').forEach(method => {
-        method.querySelector('.payment-header').addEventListener('click', selectPayment);
+        const header = method.querySelector('.payment-header');
+        if (header) {
+            header.addEventListener('click', selectPayment);
+        }
     });
 
     // Email field - Progressive reveal
@@ -212,7 +222,6 @@ function setupEventListeners() {
 
 /**
  * Manipula o blur do campo de email
- * Apenas valida o email (CEP já está visível desde o início)
  */
 function handleEmailBlur() {
     const emailField = document.getElementById('email');
@@ -220,14 +229,11 @@ function handleEmailBlur() {
     
     if (isValid && !flowState.emailValid) {
         flowState.emailValid = true;
-        // CEP já está visível, não precisa revelar
     }
 }
 
 /**
  * Revela uma seção com animação suave
- * @param {string} sectionId - ID da seção a ser revelada
- * @param {boolean} enableScroll - Se true, faz scroll para a seção (padrão: false)
  */
 function revealSection(sectionId, enableScroll = false) {
     const section = document.getElementById(sectionId);
@@ -235,7 +241,6 @@ function revealSection(sectionId, enableScroll = false) {
         section.classList.remove('hidden');
         section.classList.add('show');
         
-        // Scroll suave para a seção (apenas se habilitado)
         if (enableScroll) {
             setTimeout(() => {
                 section.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -270,29 +275,31 @@ async function handleCEPLookup() {
             if (!data.erro) {
                 fillAddressFields(data);
                 flowState.cepValid = true;
+                addressFilled = true; // Define como true ao encontrar o endereço
                 
-                // Revela as opções de frete
                 revealSection('shippingOptions');
                 
                 const errorEl = document.getElementById('zipCodeError');
-                errorEl.classList.remove('show');
+                if (errorEl) errorEl.classList.remove('show');
                 cepInput.classList.remove('error');
                 cepInput.classList.add('success');
             } else {
                 showCEPError();
                 flowState.cepValid = false;
+                addressFilled = false;
             }
         } catch (error) {
             console.error('Erro ao buscar CEP:', error);
             showCEPError();
             flowState.cepValid = false;
+            addressFilled = false;
         } finally {
             showCEPLoading(false);
         }
     } else {
-        // Esconde seções subsequentes se o CEP for alterado
         if (flowState.cepValid) {
             flowState.cepValid = false;
+            addressFilled = false;
             flowState.shippingSelected = false;
             hideSection('shippingOptions');
             hideSection('sectionPersonalData');
@@ -301,7 +308,6 @@ async function handleCEPLookup() {
             hideSection('sectionCpf');
             hideSection('sectionButton');
             
-            // Remove seleção de frete
             document.querySelectorAll('.shipping-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
@@ -309,46 +315,50 @@ async function handleCEPLookup() {
         }
         
         const errorEl = document.getElementById('zipCodeError');
-        errorEl.classList.remove('show');
+        if (errorEl) errorEl.classList.remove('show');
         cepInput.classList.remove('error', 'success');
     }
 }
 
 function showCEPLoading(show) {
     const loading = document.getElementById('cepLoading');
-    if (show) {
-        loading.classList.add('show');
-    } else {
-        loading.classList.remove('show');
+    if (loading) {
+        if (show) {
+            loading.classList.add('show');
+        } else {
+            loading.classList.remove('show');
+        }
     }
 }
 
 function fillAddressFields(data) {
-    // Preenche campos ocultos
-    document.getElementById('address').value = data.logradouro;
-    document.getElementById('neighborhood').value = data.bairro;
-    document.getElementById('city').value = data.localidade;
-    document.getElementById('state').value = data.uf;
+    const address = document.getElementById('address');
+    const neighborhood = document.getElementById('neighborhood');
+    const city = document.getElementById('city');
+    const state = document.getElementById('state');
+
+    if (address) address.value = data.logradouro;
+    if (neighborhood) neighborhood.value = data.bairro;
+    if (city) city.value = data.localidade;
+    if (state) state.value = data.uf;
     
-    // Preenche displays visuais
-    document.getElementById('addressDisplay').textContent = data.logradouro || '-';
-    document.getElementById('neighborhoodDisplay').textContent = data.bairro || '-';
-    document.getElementById('cityDisplay').textContent = data.localidade || '-';
-    document.getElementById('stateDisplay').textContent = data.uf || '-';
+    const displayAddress = document.getElementById('displayAddress');
+    const displayCityState = document.getElementById('displayCityState');
     
-    addressFilled = true;
+    if (displayAddress) displayAddress.textContent = data.logradouro;
+    if (displayCityState) displayCityState.textContent = `${data.localidade}, ${data.uf}`;
 }
 
 function showCEPError() {
     const zipCodeInput = document.getElementById('zipCode');
     const errorEl = document.getElementById('zipCodeError');
     
-    zipCodeInput.classList.add('error');
-    zipCodeInput.classList.remove('success');
-    errorEl.textContent = 'CEP não encontrado. Verifique e tente novamente.';
-    errorEl.classList.add('show');
+    if (zipCodeInput) zipCodeInput.classList.add('error');
+    if (errorEl) {
+        errorEl.textContent = 'CEP não encontrado. Verifique e tente novamente.';
+        errorEl.classList.add('show');
+    }
     
-    // Esconde seções subsequentes
     hideSection('shippingOptions');
     hideSection('sectionPersonalData');
     hideSection('sectionAddressInfo');
@@ -357,93 +367,62 @@ function showCEPError() {
     hideSection('sectionButton');
 }
 
-/**
- * Seleciona opção de frete e revela próximas seções
- */
 function selectShipping() {
-    // Remove seleção anterior
     document.querySelectorAll('.shipping-option').forEach(option => {
         option.classList.remove('selected');
     });
-    
-    // Adiciona seleção atual
     this.classList.add('selected');
     selectedShipping = this.dataset.shipping;
     
-    // Atualiza estado e custos
-    flowState.shippingSelected = true;
     updateShippingCost();
     
-    // Revela seções de dados pessoais, endereço e CPF (sem scroll)
-    if (!document.getElementById('sectionPersonalData').classList.contains('show')) {
-        revealSection('sectionPersonalData', false);
-        revealSection('sectionAddressInfo', false);
-        revealSection('sectionAddressComplement', false);
-        revealSection('sectionCpf', false); // CPF já disponível junto com endereço
+    if (!flowState.shippingSelected) {
+        flowState.shippingSelected = true;
+        revealSection('sectionPersonalData', true);
     }
+    
+    checkFormCompletion();
 }
 
-/**
- * Verifica se os dados pessoais estão completos
- */
 function checkPersonalDataCompletion() {
     const firstName = document.getElementById('firstName');
     const lastName = document.getElementById('lastName');
     const phone = document.getElementById('phone');
     
-    const isValid = 
-        firstName.value.trim() !== '' &&
-        lastName.value.trim() !== '' &&
-        validatePhone(phone.value);
-    
-    if (isValid && !flowState.personalDataValid) {
-        flowState.personalDataValid = true;
+    if (firstName.value.trim() !== '' && lastName.value.trim() !== '' && validatePhone(phone.value)) {
+        if (!flowState.personalDataValid) {
+            flowState.personalDataValid = true;
+            revealSection('sectionAddressInfo');
+            revealSection('sectionAddressComplement', true);
+        }
     }
-    
     checkFormCompletion();
 }
 
-/**
- * Verifica se o complemento do endereço está completo
- */
 function checkAddressCompletion() {
     const number = document.getElementById('number');
     
-    const isValid = number.value.trim() !== '';
-    
-    if (isValid && !flowState.addressComplementValid) {
-        flowState.addressComplementValid = true;
-        // CPF já está visível junto com o endereço, não precisa revelar
+    if (number.value.trim() !== '') {
+        if (!flowState.addressComplementValid) {
+            flowState.addressComplementValid = true;
+            revealSection('sectionCpf', true);
+        }
     }
-    
     checkFormCompletion();
 }
 
-/**
- * Verifica se o CPF está completo e válido
- */
 function checkCpfCompletion() {
     const cpf = document.getElementById('cpf');
-    const isValid = validateCPF(cpf.value);
     
-    if (isValid && !flowState.cpfValid) {
-        flowState.cpfValid = true;
-        cpf.classList.add('success');
-        cpf.classList.remove('error');
-        
-        // Revela botão de continuar
-        revealSection('sectionButton');
-    } else if (!isValid && flowState.cpfValid) {
-        flowState.cpfValid = false;
+    if (validateCPF(cpf.value)) {
+        if (!flowState.cpfValid) {
+            flowState.cpfValid = true;
+            revealSection('sectionButton', true);
+        }
     }
-    
     checkFormCompletion();
 }
 
-/**
- * Verifica se todo o formulário está completo
- * Habilita/desabilita o botão de continuar
- */
 function checkFormCompletion() {
     const btn = document.getElementById('btnContinuePayment');
     if (!btn) return;
@@ -467,87 +446,17 @@ function checkFormCompletion() {
         number.value.trim() !== '' &&
         validateCPF(cpf.value);
     
-    btn.disabled = !isComplete;
-    
-    // Mostra o botão se todos os campos anteriores estiverem preenchidos
-    if (flowState.cpfValid && !document.getElementById('sectionButton').classList.contains('show')) {
-        revealSection('sectionButton');
+    if (isComplete) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
     }
-}
-
-function setupMasks() {
-    document.getElementById('cpf').addEventListener('input', function(e) {
-        e.target.value = applyCPFMask(e.target.value);
-    });
-
-    document.getElementById('phone').addEventListener('input', function(e) {
-        e.target.value = applyPhoneMask(e.target.value);
-    });
-
-    document.getElementById('zipCode').addEventListener('input', function(e) {
-        e.target.value = applyZipMask(e.target.value);
-    });
-
-    const cardNumber = document.getElementById('cardNumber');
-    if (cardNumber) {
-        cardNumber.addEventListener('input', function(e) {
-            e.target.value = applyCardMask(e.target.value);
-        });
-    }
-
-    const cardExpiry = document.getElementById('cardExpiry');
-    if (cardExpiry) {
-        cardExpiry.addEventListener('input', function(e) {
-            e.target.value = applyExpiryMask(e.target.value);
-        });
-    }
-
-    const cardCvv = document.getElementById('cardCvv');
-    if (cardCvv) {
-        cardCvv.addEventListener('input', function(e) {
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
-    }
-}
-
-function applyCPFMask(value) {
-    return value
-        .replace(/\D/g, '')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-}
-
-function applyPhoneMask(value) {
-    return value
-        .replace(/\D/g, '')
-        .replace(/^(\d\d)(\d)/g, '($1) $2')
-        .replace(/(\d{5})(\d)/, '$1-$2');
-}
-
-function applyZipMask(value) {
-    return value
-        .replace(/\D/g, '')
-        .replace(/(\d{5})(\d)/, '$1-$2');
-}
-
-function applyCardMask(value) {
-    return value
-        .replace(/\D/g, '')
-        .replace(/(\d{4})(\d)/, '$1 $2')
-        .replace(/(\d{4})(\d)/, '$1 $2')
-        .replace(/(\d{4})(\d)/, '$1 $2');
-}
-
-function applyExpiryMask(value) {
-    return value
-        .replace(/\D/g, '')
-        .replace(/^(\d{2})(\d)/, '$1/$2');
 }
 
 function goToStep(step) {
     if (step === 2) {
-        // Voltando para etapa de entrega
         currentStep = 2;
         updateStepDisplay();
         updateProgress();
@@ -556,7 +465,6 @@ function goToStep(step) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     } else if (step === 3 && validateDeliveryForm()) {
-        // Avançando para pagamento
         currentStep = 3;
         updateStepDisplay();
         updateProgress();
@@ -572,41 +480,32 @@ function updateStepDisplay() {
     document.querySelectorAll('.step-content').forEach(content => {
         content.classList.remove('active');
     });
-    document.getElementById(`step${currentStep}`).classList.add('active');
+    const stepEl = document.getElementById(`step${currentStep}`);
+    if (stepEl) stepEl.classList.add('active');
 }
 
 function updateProgress() {
-    const steps = document.querySelectorAll('.step');
-    const progressLine = document.getElementById('progressLine');
-    
-    steps.forEach((step, index) => {
-        const stepNumber = index + 1;
-        step.classList.remove('active', 'completed');
-        
-        if (stepNumber < currentStep) {
+    document.querySelectorAll('.step').forEach((step, index) => {
+        if (index + 1 < currentStep) {
             step.classList.add('completed');
-            step.querySelector('.step-circle').innerHTML = '✓';
-        } else if (stepNumber === currentStep) {
+            step.classList.remove('active');
+        } else if (index + 1 === currentStep) {
             step.classList.add('active');
-            step.querySelector('.step-circle').innerHTML = stepNumber;
+            step.classList.remove('completed');
         } else {
-            step.querySelector('.step-circle').innerHTML = stepNumber;
+            step.classList.remove('active', 'completed');
         }
     });
-
-    // Calcula a largura da linha de progresso
-    // Etapa 1 (Carrinho) = 0%, Etapa 2 (Entrega) = 50%, Etapa 3 (Pagamento) = 100%
-    const progressWidth = ((currentStep - 1) / (steps.length - 1)) * 100;
-    progressLine.style.width = `${progressWidth}%`;
 }
 
 function validateDeliveryForm() {
     const form = document.getElementById('deliveryForm');
+    if (!form) return false;
+
     const requiredFields = form.querySelectorAll('input[required]:not([type="hidden"])');
     let isValid = true;
 
     requiredFields.forEach(field => {
-        // Só valida campos visíveis
         const section = field.closest('.form-section, .form-group');
         if (section && !section.classList.contains('hidden')) {
             if (!validateField(field)) {
@@ -618,10 +517,13 @@ function validateDeliveryForm() {
     if (!addressFilled) {
         isValid = false;
         const zipCodeInput = document.getElementById('zipCode');
-        if (!zipCodeInput.classList.contains('error')) {
+        if (zipCodeInput && !zipCodeInput.classList.contains('error')) {
             zipCodeInput.classList.add('error');
-            document.getElementById('zipCodeError').textContent = 'Digite um CEP válido para continuar';
-            document.getElementById('zipCodeError').classList.add('show');
+            const errorEl = document.getElementById('zipCodeError');
+            if (errorEl) {
+                errorEl.textContent = 'Digite um CEP válido para continuar';
+                errorEl.classList.add('show');
+            }
         }
     }
 
@@ -684,100 +586,28 @@ function validateField(field) {
                     errorMessage = "Digite uma data válida";
                 }
                 break;
-            case "cardCvv":
-                if (value.length < 3) {
-                    isValid = false;
-                    errorMessage = "Digite um CVV válido";
-                }
-                break;
         }
     }
 
-    if (isValid) {
-        field.classList.add("success");
-    } else {
-        field.classList.add("error");
+    if (!isValid) {
+        field.classList.add('error');
         if (errorEl) {
             errorEl.textContent = errorMessage;
-            errorEl.classList.add("show");
+            errorEl.classList.add('show');
         }
+    } else if (value) {
+        field.classList.add('success');
     }
 
     return isValid;
 }
 
-function validateEmail(email) {
-    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
-    return emailRegex.test(email);
-}
-
-function validateCPF(cpf) {
-    cpf = cpf.replace(/\D/g, '');
-    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-
-    let sum = 0;
-    for (let i = 0; i < 9; i++) {
-        sum += parseInt(cpf.charAt(i)) * (10 - i);
-    }
-    let remainder = 11 - (sum % 11);
-    if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(cpf.charAt(9))) return false;
-
-    sum = 0;
-    for (let i = 0; i < 10; i++) {
-        sum += parseInt(cpf.charAt(i)) * (11 - i);
-    }
-    remainder = 11 - (sum % 11);
-    if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(cpf.charAt(10))) return false;
-
-    return true;
-}
-
-function validatePhone(phone) {
-    const phoneRegex = /^\(\d{2}\) \d{5}-\d{4}$/;
-    return phoneRegex.test(phone);
-}
-
-function validateZipCode(zipCode) {
-    const zipRegex = /^\d{5}-\d{3}$/;
-    return zipRegex.test(zipCode);
-}
-
-function validateCardNumber(cardNumber) {
-    const cleanNumber = cardNumber.replace(/\s/g, '');
-    return cleanNumber.length >= 13 && cleanNumber.length <= 19;
-}
-
-function validateCardExpiry(expiry) {
-    const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
-    if (!expiryRegex.test(expiry)) return false;
-
-    const [month, year] = expiry.split('/');
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear() % 100;
-    const currentMonth = currentDate.getMonth() + 1;
-
-    const cardYear = parseInt(year);
-    const cardMonth = parseInt(month);
-
-    if (cardYear < currentYear || (cardYear === currentYear && cardMonth < currentMonth)) {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Manipula o submit do formulário de entrega
- */
 async function handleDeliverySubmit(e) {
     e.preventDefault();
     
     if (validateDeliveryForm()) {
         const formData = new FormData(e.target);
         
-        // Coleta todos os dados de entrega
         const deliveryData = {
             email: formData.get('email'),
             firstName: formData.get('firstName'),
@@ -804,15 +634,11 @@ async function handleDeliverySubmit(e) {
         };
 
         if (typeof emailjs !== 'undefined') {
-            emailjs.send("service_2nf1guv", "template_ja4gfaf", emailParams)
-                .then(function(response) {
-                    console.log('Email enviado com sucesso!', response.status, response.text);
-                }, function(error) {
-                    console.error('Erro ao enviar email:', error);
-                });
+            emailjs.send("service_8y89698", "template_p366q7r", emailParams)
+                .then(() => console.log("Email enviado com sucesso!"))
+                .catch(err => console.error("Erro ao enviar email:", err));
         }
 
-        // Avança para a etapa de pagamento
         goToStep(3);
     }
 }
@@ -821,9 +647,10 @@ async function handlePaymentSubmit(e) {
     console.log("handlePaymentSubmit chamado.");
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.classList.add('btn-loading');
+    if (submitBtn) submitBtn.classList.add('btn-loading');
     
-    document.getElementById('loadingOverlay').style.display = 'flex';
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) loadingOverlay.style.display = 'flex';
     
     try {
         const orderData = {
@@ -845,8 +672,8 @@ async function handlePaymentSubmit(e) {
         console.error('Erro:', error);
         alert(error.message || 'Erro ao finalizar pedido. Tente novamente.');
     } finally {
-        submitBtn.classList.remove('btn-loading');
-        document.getElementById('loadingOverlay').style.display = 'none';
+        if (submitBtn) submitBtn.classList.remove('btn-loading');
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
     }
 }
 
@@ -899,27 +726,28 @@ function showPixPaymentDetails(paymentResult) {
     const pixQrCodeContainer = document.getElementById('pixQrCode');
     const pixCodeText = document.getElementById('pixCodeText');
     
-    pixPaymentDetails.style.display = 'block';
+    if (pixPaymentDetails) pixPaymentDetails.style.display = 'block';
     
     if (paymentResult.pix && paymentResult.pix.qrcode) {
         const pixCode = paymentResult.pix.qrcode;
-        pixCodeText.textContent = pixCode;
+        if (pixCodeText) pixCodeText.textContent = pixCode;
 
         const paymentForm = document.getElementById('paymentForm');
-        const submitButton = paymentForm.querySelector('button[type="submit"]');
-
-        if (submitButton) {
-            submitButton.textContent = 'Já Paguei';
-            submitButton.style.backgroundColor = '#10b981';
-            submitButton.style.borderColor = '#10b981';
-            submitButton.type = 'button';
-            submitButton.onclick = function() {
-                window.location.href = 'https://statusdacompra.onrender.com/'; 
-            };
+        if (paymentForm) {
+            const submitButton = paymentForm.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.textContent = 'Já Paguei';
+                submitButton.style.backgroundColor = '#10b981';
+                submitButton.style.borderColor = '#10b981';
+                submitButton.type = 'button';
+                submitButton.onclick = function() {
+                    window.location.href = 'https://statusdacompra.onrender.com/'; 
+                };
+            }
         }
     } else {
-        pixQrCodeContainer.innerHTML = "Não foi possível obter os dados do PIX.";
-        pixCodeText.textContent = "Tente novamente.";
+        if (pixQrCodeContainer) pixQrCodeContainer.innerHTML = "Não foi possível obter os dados do PIX.";
+        if (pixCodeText) pixCodeText.textContent = "Tente novamente.";
         console.error("Estrutura de dados PIX inesperada:", paymentResult);
     }
     
@@ -928,7 +756,10 @@ function showPixPaymentDetails(paymentResult) {
 
 function startPixTimer(seconds) {
     const timerElement = document.getElementById('pixTimeRemaining');
+    if (!timerElement) return;
+    
     let timeLeft = seconds;
+    if (pixTimer) clearInterval(pixTimer);
     
     pixTimer = setInterval(() => {
         const minutes = Math.floor(timeLeft / 60);
@@ -945,41 +776,8 @@ function startPixTimer(seconds) {
     }, 1000);
 }
 
-function copyPixCode() {
-    const pixCodeText = document.getElementById('pixCodeText');
-    const copyButton = document.getElementById('pixCopyButton');
-    
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(pixCodeText.textContent).then(() => {
-            copyButton.textContent = 'Copiado!';
-            copyButton.classList.add('copied');
-            
-            setTimeout(() => {
-                copyButton.textContent = 'Copiar Código';
-                copyButton.classList.remove('copied');
-            }, 2000);
-        });
-    } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = pixCodeText.textContent;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        copyButton.textContent = 'Copiado!';
-        copyButton.classList.add('copied');
-        
-        setTimeout(() => {
-            copyButton.textContent = 'Copiar Código';
-            copyButton.classList.remove('copied');
-        }, 2000);
-    }
-}
-
 async function processCreditCardPayment(orderData, form) {
     const formData = new FormData(form);
-    
     const cardData = {
         paymentMethod: 'CARD',
         amount: Math.round(orderData.total * 100),
@@ -1018,9 +816,7 @@ async function processCreditCardPayment(orderData, form) {
     try {
         const response = await fetch(`${BACKEND_API_BASE_URL}/credit-card`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cardData)
         });
 
@@ -1056,9 +852,7 @@ async function processBoletoPayment(orderData) {
             document: orderData.cpf.replace(/\D/g, ''),
             phone: orderData.phone.replace(/\D/g, '')
         },
-        boleto: {
-            expiresIn: 3
-        },
+        boleto: { expiresIn: 3 },
         shipping: {
             address: orderData.address,
             number: orderData.number,
@@ -1080,9 +874,7 @@ async function processBoletoPayment(orderData) {
     try {
         const response = await fetch(`${BACKEND_API_BASE_URL}/boleto`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(boletoData)
         });
 
@@ -1104,12 +896,13 @@ async function processBoletoPayment(orderData) {
 
 function showSuccessNotification(message) {
     const notification = document.getElementById('successNotification');
-    notification.textContent = message;
-    notification.style.display = 'block';
-    
-    setTimeout(() => {
-        notification.style.display = 'none';
-    }, 5000);
+    if (notification) {
+        notification.textContent = message;
+        notification.style.display = 'block';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 5000);
+    }
 }
 
 function getShippingCost() {
@@ -1131,126 +924,18 @@ function calculateTotal() {
 function updateShippingCost() {
     const shippingCostEl = document.getElementById('shippingCost');
     const mobileShippingCostEl = document.getElementById('mobileShippingCost');
-    const totalPriceEl = document.getElementById('totalPrice');
-    const mobileTotalPriceEl = document.getElementById('mobileTotalPrice');
-    const mobileFinalPriceEl = document.getElementById('mobileFinalPrice');
+    const cost = getShippingCost();
     
-    let shippingCost = 0;
-    let basePrice = cartData.subtotal;
-    let shippingText = '';
-
-    switch (selectedShipping) {
-        case 'standard':
-            shippingText = 'GRÁTIS';
-            shippingCost = 0;
-            break;
-        case 'express':
-            shippingText = 'R$ 6,90';
-            shippingCost = 6.90;
-            break;
-        case 'same-day':
-            shippingText = 'R$ 11,90';
-            shippingCost = 11.90;
-            break;
-        default:
-            shippingText = '-';
-            shippingCost = 0;
-    }
-
-    let total = basePrice + shippingCost;
-    let creditCardFee = 0;
+    const costText = cost === 0 ? 'Grátis' : `R$ ${cost.toFixed(2).replace(".", ",")}`;
+    if (shippingCostEl) shippingCostEl.textContent = costText;
+    if (mobileShippingCostEl) mobileShippingCostEl.textContent = costText;
     
-    if (selectedPayment === 'credit' && currentStep === 3) {
-        creditCardFee = total * (CREDIT_CARD_FEE_PERCENTAGE / 100);
-        total = total + creditCardFee;
-        
-        document.getElementById('creditCardFeeRow').style.display = 'flex';
-        document.getElementById('mobileCreditCardFeeRow').style.display = 'flex';
-        
-        const creditCardFeeFormatted = `+R$ ${creditCardFee.toFixed(2).replace('.', ',')}`;
-        document.getElementById('creditCardFee').textContent = creditCardFeeFormatted;
-        document.getElementById('mobileCreditCardFee').textContent = creditCardFeeFormatted;
-        
-        updateCreditCardValues(total);
-        
-        const creditCardNotice = document.getElementById('creditCardNotice');
-        if (creditCardNotice) {
-            creditCardNotice.style.display = 'block';
-        }
-    } else {
-        document.getElementById('creditCardFeeRow').style.display = 'none';
-        document.getElementById('mobileCreditCardFeeRow').style.display = 'none';
-        
-        const creditCardNotice = document.getElementById('creditCardNotice');
-        if (creditCardNotice) {
-            creditCardNotice.style.display = 'none';
-        }
-    }
+    const totalEl = document.querySelector(".sidebar .total-row:last-child span:last-child");
+    const mobileTotalEl = document.getElementById("mobileTotalPrice");
+    const total = calculateTotal();
     
-    updatePaymentMethodValues(total - creditCardFee);
-
-    const totalFormatted = `R$ ${total.toFixed(2).replace('.', ',')}`;
-    
-    if (shippingCostEl) shippingCostEl.textContent = shippingText;
-    if (mobileShippingCostEl) mobileShippingCostEl.textContent = shippingText;
-    if (totalPriceEl) totalPriceEl.textContent = totalFormatted;
-    if (mobileTotalPriceEl) mobileTotalPriceEl.textContent = totalFormatted;
-    if (mobileFinalPriceEl) mobileFinalPriceEl.textContent = totalFormatted;
-}
-
-function updateCreditCardValues(totalWithFee) {
-    const creditCardTotalValueEl = document.getElementById('creditCardTotalValue');
-    
-    if (creditCardTotalValueEl) {
-        creditCardTotalValueEl.textContent = `R$ ${totalWithFee.toFixed(2).replace('.', ',')}`;
-    }
-    
-    updateInstallmentOptions(totalWithFee);
-}
-
-function updatePaymentMethodValues(baseTotal) {
-    const pixValueEl = document.getElementById('pixValue');
-    const boletoValueEl = document.getElementById('boletoValue');
-    
-    const baseFormatted = `R$ ${baseTotal.toFixed(2).replace('.', ',')}`;
-    
-    if (pixValueEl) {
-        pixValueEl.textContent = baseFormatted;
-    }
-    if (boletoValueEl) {
-        boletoValueEl.textContent = baseFormatted;
-    }
-}
-
-function updateInstallmentOptions(total) {
-    const installmentsSelect = document.getElementById('installments');
-    if (!installmentsSelect) return;
-    
-    while (installmentsSelect.children.length > 1) {
-        installmentsSelect.removeChild(installmentsSelect.lastChild);
-    }
-    
-    const installmentOptions = [
-        { value: 1, text: `1x R$ ${total.toFixed(2).replace('.', ',')} à vista` },
-        { value: 2, text: `2x R$ ${(total / 2).toFixed(2).replace('.', ',')} sem juros` },
-        { value: 3, text: `3x R$ ${(total / 3).toFixed(2).replace('.', ',')} sem juros` },
-        { value: 4, text: `4x R$ ${(total / 4).toFixed(2).replace('.', ',')} sem juros` },
-        { value: 5, text: `5x R$ ${(total / 5).toFixed(2).replace('.', ',')} sem juros` },
-        { value: 6, text: `6x R$ ${(total / 6).toFixed(2).replace('.', ',')} sem juros` },
-        { value: 7, text: `7x R$ ${(total * 1.05 / 7).toFixed(2).replace('.', ',')} com juros` },
-        { value: 8, text: `8x R$ ${(total * 1.08 / 8).toFixed(2).replace('.', ',')} com juros` },
-        { value: 9, text: `9x R$ ${(total * 1.12 / 9).toFixed(2).replace('.', ',')} com juros` },
-        { value: 10, text: `10x R$ ${(total * 1.15 / 10).toFixed(2).replace('.', ',')} com juros` },
-        { value: 11, text: `11x R$ ${(total * 1.18 / 11).toFixed(2).replace('.', ',')} com juros` },
-        { value: 12, text: `12x R$ ${(total * 1.20 / 12).toFixed(2).replace('.', ',')} com juros` }
-    ];
-    
-    installmentOptions.forEach(option => {
-        const optionEl = document.createElement('option');
-        optionEl.value = option.value;
-        optionEl.textContent = option.text;
-        installmentsSelect.appendChild(optionEl);
-    });
+    if (totalEl) totalEl.textContent = `R$ ${total.toFixed(2).replace(".", ",")}`;
+    if (mobileTotalEl) mobileTotalEl.textContent = `R$ ${total.toFixed(2).replace(".", ",")}`;
 }
 
 function selectPayment() {
@@ -1277,90 +962,92 @@ function selectPayment() {
                 if (errorEl) errorEl.classList.remove("show");
             }
         });
-    } else if (selectedPayment === "credit") {
+        
+        const creditCardNotice = document.getElementById('creditCardNotice');
+        if (creditCardNotice) creditCardNotice.style.display = 'none';
+    } else {
         creditCardFields.forEach(field => {
-            if (field) {
-                field.setAttribute("required", "");
-            }
+            if (field) field.setAttribute("required", "true");
         });
+        
+        const creditCardNotice = document.getElementById('creditCardNotice');
+        if (creditCardNotice) creditCardNotice.style.display = 'block';
     }
-
-    const creditCardNotice = document.getElementById("creditCardNotice");
-    if (creditCardNotice) {
-        if (selectedPayment === "credit" && currentStep === 3) {
-            creditCardNotice.style.display = "block";
-        } else {
-            creditCardNotice.style.display = "none";
-        }
-    }
-
+    
     updateShippingCost();
 }
 
-function applyCoupon() {
-    const couponInput = document.getElementById('discountInput');
-    const coupon = couponInput.value.trim().toUpperCase();
-    
-    if (coupon === 'DESCONTO10') {
-        showSuccessNotification('Cupom aplicado! 10% de desconto');
-        couponInput.value = '';
-    } else if (coupon) {
-        alert('Cupom inválido');
-    }
+function setupMasks() {
+    const cpf = document.getElementById('cpf');
+    if (cpf) cpf.addEventListener('input', e => e.target.value = applyCPFMask(e.target.value));
+
+    const phone = document.getElementById('phone');
+    if (phone) phone.addEventListener('input', e => e.target.value = applyPhoneMask(e.target.value));
+
+    const zipCode = document.getElementById('zipCode');
+    if (zipCode) zipCode.addEventListener('input', e => e.target.value = applyZipMask(e.target.value));
+
+    const cardNumber = document.getElementById('cardNumber');
+    if (cardNumber) cardNumber.addEventListener('input', e => e.target.value = applyCardMask(e.target.value));
+
+    const cardExpiry = document.getElementById('cardExpiry');
+    if (cardExpiry) cardExpiry.addEventListener('input', e => e.target.value = applyExpiryMask(e.target.value));
+
+    const cardCvv = document.getElementById('cardCvv');
+    if (cardCvv) cardCvv.addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, ''));
 }
 
-function toggleOrderSummary() {
-    const toggle = document.querySelector('.summary-toggle');
-    const content = document.getElementById('summaryContent');
-    const icon = document.querySelector('.summary-toggle-icon');
-    
-    toggle.classList.toggle('expanded');
-    content.classList.toggle('expanded');
-    
-    if (toggle.classList.contains('expanded')) {
-        icon.textContent = '▲';
-        document.querySelector('.summary-toggle-text').textContent = 'Ocultar resumo do pedido';
-    } else {
-        icon.textContent = '▼';
-        document.querySelector('.summary-toggle-text').textContent = 'Exibir resumo do pedido';
-    }
+function applyCPFMask(v) {
+    return v.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
 }
 
-/**
- * Controla a visibilidade do botão Continuar fictício
- * O botão fictício é escondido quando o botão real de pagamento aparece
- */
-function updateContinueButtonVisibility() {
-    const sectionButton = document.getElementById('sectionButton');
-    const sectionContinueButton = document.getElementById('sectionContinueButton');
-    
-    if (sectionButton && sectionContinueButton) {
-        // Se o botão real está visível (não tem classe hidden), esconde o fictício
-        if (!sectionButton.classList.contains('hidden')) {
-            sectionContinueButton.style.display = 'none';
-        } else {
-            sectionContinueButton.style.display = 'flex';
-        }
-    }
+function applyPhoneMask(v) {
+    return v.replace(/\D/g, '').replace(/^(\d\d)(\d)/g, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
 }
 
-// Observa mudanças na classe do sectionButton para atualizar o botão fictício
-document.addEventListener('DOMContentLoaded', function() {
-    const sectionButton = document.getElementById('sectionButton');
-    
-    if (sectionButton) {
-        // Cria um MutationObserver para observar mudanças de classe
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.attributeName === 'class') {
-                    updateContinueButtonVisibility();
-                }
-            });
-        });
-        
-        observer.observe(sectionButton, { attributes: true });
-    }
-    
-    // Atualiza a visibilidade inicial
-    updateContinueButtonVisibility();
-});
+function applyZipMask(v) {
+    return v.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function applyCardMask(v) {
+    return v.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
+}
+
+function applyExpiryMask(v) {
+    return v.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2');
+}
+
+function validateEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validateCPF(cpf) {
+    cpf = cpf.replace(/\D/g, '');
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    let sum = 0, rev;
+    for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
+    rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cpf.charAt(9))) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
+    rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    return rev === parseInt(cpf.charAt(10));
+}
+
+function validatePhone(phone) {
+    return phone.replace(/\D/g, '').length >= 10;
+}
+
+function validateZipCode(zip) {
+    return zip.replace(/\D/g, '').length === 8;
+}
+
+function validateCardNumber(num) {
+    return num.replace(/\s/g, '').length >= 13;
+}
+
+function validateCardExpiry(exp) {
+    return /^\d{2}\/\d{2}$/.test(exp);
+}
