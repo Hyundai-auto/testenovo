@@ -1,4 +1,4 @@
-JAVASCRIPT 1:let currentStep = 1;
+let currentStep = 1;
         let selectedShipping = 'standard';
         let selectedPayment = 'pix';
         let addressFilled = false;
